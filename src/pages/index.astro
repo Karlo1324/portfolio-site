@@ -1,17 +1,365 @@
 ---
+import Layout from '../layouts/Layout.astro';
+import { Image } from 'astro:assets';
 
+// 1. Load Hero Cover image from src/assets/hero/
+const heroFiles = Object.values(
+  import.meta.glob('../assets/hero/*.{jpg,jpeg,png,webp,JPG,PNG}', { eager: true })
+) as any[];
+
+// 2. Load all gallery images recursively from src/assets/gallery/ and subfolders
+const galleryModules = import.meta.glob('../assets/gallery/**/*.{jpg,jpeg,png,webp,JPG,PNG}', { eager: true });
+
+// Parse category tag from subfolder path (sports, wedding, events)
+const galleryFiles = Object.entries(galleryModules).map(([path, module]: [string, any]) => {
+  const parts = path.split('/');
+  parts.pop(); // remove filename
+  const folder = parts.pop()?.toLowerCase();
+
+  const category = (folder === 'gallery' || !folder) ? 'all' : folder;
+
+  return {
+    img: module.default,
+    category: category
+  };
+});
+
+const coverPhoto = heroFiles.length > 0 
+  ? heroFiles[0].default 
+  : (galleryFiles.length > 0 ? galleryFiles[0].img : null);
 ---
 
-<html lang="en">
-	<head>
-		<meta charset="utf-8" />
-		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<link rel="icon" href="/favicon.ico" />
-		<meta name="viewport" content="width=device-width" />
-		<meta name="generator" content={Astro.generator} />
-		<title>Astro</title>
-	</head>
-	<body>
-		<h1>Astro</h1>
-	</body>
-</html>
+<Layout title="PORTFOLIO TEST NI KARL">
+
+  <!-- FULL SCREEN COVER BANNER -->
+  <section class="relative w-full h-[calc(100vh-5rem)] flex flex-col items-center justify-center text-center px-4 overflow-hidden">
+    {coverPhoto && (
+      <Image 
+        src={coverPhoto} 
+        alt="Portfolio Cover" 
+        class="absolute inset-0 w-full h-full object-cover z-0"
+      />
+    )}
+    
+    <div class="absolute inset-0 bg-black/50 z-10"></div>
+
+    <div class="relative z-20 max-w-4xl mx-auto flex flex-col items-center gap-8">
+      <h1 class="text-3xl md:text-5xl lg:text-6xl font-bold tracking-[0.2em] text-white uppercase drop-shadow-lg">
+        PORTFOLIO TEST NI KARL
+      </h1>
+      
+      <!-- HERO BUTTONS CONTAINER -->
+      <div class="flex flex-wrap gap-3 items-center justify-center">
+        <a 
+          href="#gallery" 
+          class="px-6 py-3 border border-white/80 text-white text-xs md:text-sm font-medium tracking-[0.2em] uppercase hover:bg-white hover:text-black transition-all duration-300 backdrop-blur-xs bg-black/20"
+        >
+          View Gallery
+        </a>
+
+        <button 
+          id="open-contact-modal" 
+          class="px-6 py-3 bg-white text-black text-xs md:text-sm font-semibold tracking-[0.2em] uppercase hover:bg-neutral-200 transition-all duration-300 active:scale-95 cursor-pointer shadow-lg"
+        >
+          CONTACT KARL'S GALLERY
+        </button>
+
+        <!-- UNIVERSAL SHARE BUTTON -->
+        <button 
+          id="share-btn" 
+          class="px-5 py-3 border border-white/40 bg-neutral-900/80 text-white text-xs md:text-sm font-medium tracking-[0.15em] uppercase hover:bg-neutral-800 transition-all duration-300 active:scale-95 cursor-pointer backdrop-blur-md flex items-center gap-2"
+        >
+          <span>🔗</span>
+          <span>Share</span>
+        </button>
+      </div>
+    </div>
+
+    <a href="#gallery" class="absolute bottom-8 z-20 text-white/70 hover:text-white transition-opacity text-xl animate-bounce">
+      ↓
+    </a>
+  </section>
+
+  <!-- GALLERY SECTION WITH CATEGORY FILTERS -->
+  <section id="gallery" class="max-w-7xl mx-auto px-4 md:px-6 pt-20 pb-20">
+    <div class="mb-8 text-center max-w-2xl mx-auto">
+      <h2 class="text-2xl md:text-4xl font-light tracking-wide mb-3">Selected Works</h2>
+      <p class="text-neutral-400 text-sm md:text-base">Visual storytelling across sports, wedding, and event photography.</p>
+    </div>
+
+    <!-- CATEGORY FILTER BUTTONS -->
+    <div class="flex flex-wrap justify-center items-center gap-2 md:gap-3 mb-12" id="filter-buttons">
+      <button 
+        data-filter="all" 
+        class="filter-btn active px-6 py-2 rounded-full text-xs uppercase tracking-widest font-semibold border border-white bg-white text-black transition-all duration-300 cursor-pointer shadow-sm"
+      >
+        All
+      </button>
+      <button 
+        data-filter="sports" 
+        class="filter-btn px-6 py-2 rounded-full text-xs uppercase tracking-widest font-semibold border border-neutral-800 bg-neutral-900 text-neutral-400 hover:text-white hover:border-neutral-700 transition-all duration-300 cursor-pointer"
+      >
+        Sports
+      </button>
+      <button 
+        data-filter="wedding" 
+        class="filter-btn px-6 py-2 rounded-full text-xs uppercase tracking-widest font-semibold border border-neutral-800 bg-neutral-900 text-neutral-400 hover:text-white hover:border-neutral-700 transition-all duration-300 cursor-pointer"
+      >
+        Weddings
+      </button>
+      <button 
+        data-filter="events" 
+        class="filter-btn px-6 py-2 rounded-full text-xs uppercase tracking-widest font-semibold border border-neutral-800 bg-neutral-900 text-neutral-400 hover:text-white hover:border-neutral-700 transition-all duration-300 cursor-pointer"
+      >
+        Events
+      </button>
+    </div>
+
+    {galleryFiles.length === 0 ? (
+      <div class="text-center py-20 border border-dashed border-neutral-800 rounded-xl">
+        <p class="text-neutral-500">No images found yet. Add photos into <code class="text-neutral-300">src/assets/gallery/</code> or its subfolders!</p>
+      </div>
+    ) : (
+      <div class="columns-1 sm:columns-2 md:columns-3 lg:columns-4 gap-4 space-y-4" id="gallery-container">
+        {galleryFiles.map((item: any, index: number) => (
+          <div 
+            data-category={item.category} 
+            class="gallery-item break-inside-avoid relative overflow-hidden rounded-lg bg-neutral-900 group cursor-pointer shadow-md transition-all duration-500"
+          >
+            <Image 
+              src={item.img} 
+              alt={`Gallery photo ${index + 1}`}
+              class="w-full h-auto object-cover group-hover:scale-105 transition-transform duration-500 ease-out block"
+            />
+          </div>
+        ))}
+      </div>
+    )}
+  </section>
+
+  <!-- LIGHTBOX MODAL -->
+  <div 
+    id="lightbox" 
+    class="fixed inset-0 z-50 hidden bg-black/90 backdrop-blur-md flex items-center justify-center p-4 transition-opacity duration-300 opacity-0"
+  >
+    <button 
+      id="lightbox-close" 
+      class="absolute top-6 right-6 text-white text-3xl font-light hover:opacity-70 transition-opacity z-50 p-2 cursor-pointer"
+      aria-label="Close"
+    >
+      ✕
+    </button>
+    <img 
+      id="lightbox-img" 
+      src="" 
+      alt="Enlarged view" 
+      class="max-h-[90vh] max-w-[90vw] object-contain rounded-md shadow-2xl transition-transform duration-300 scale-95"
+    />
+  </div>
+
+  <!-- CONTACT MODAL -->
+  <div 
+    id="contact-modal" 
+    class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 transition-all duration-300 opacity-0 pointer-events-none"
+  >
+    <div 
+      id="contact-modal-card" 
+      class="bg-neutral-900 border border-neutral-800 p-8 rounded-2xl max-w-md w-full text-center relative transform transition-all duration-300 scale-95 opacity-0 shadow-2xl"
+    >
+      <button 
+        id="close-contact-modal" 
+        class="absolute top-4 right-4 text-neutral-400 hover:text-white text-lg transition-colors cursor-pointer"
+        aria-label="Close modal"
+      >
+        ✕
+      </button>
+
+      <div class="text-3xl mb-3">📬</div>
+      <h2 class="text-2xl font-light tracking-wide mb-1 text-white">Get in Touch</h2>
+      <p class="text-xs text-neutral-400 mb-6">Connect with Karl's Gallery for bookings & inquiries.</p>
+
+      <div class="space-y-3">
+        <!-- Facebook Link -->
+        <a 
+          href="https://www.facebook.com/profile.php?id=61593356425555&rdid=mE5xH7h8q1f11DX1&share_url=https%3A%2F%2Fwww.facebook.com%2Fshare%2F1CyUCRFnKZ%2F#" 
+          target="_blank" 
+          rel="noopener noreferrer" 
+          class="flex items-center justify-between p-4 bg-neutral-950 border border-neutral-800/80 rounded-xl hover:border-blue-500 hover:bg-neutral-900 transition-all duration-300 group text-left"
+        >
+          <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-lg bg-blue-600/20 text-blue-400 flex items-center justify-center font-bold text-lg">
+              f
+            </div>
+            <div>
+              <p class="text-xs font-semibold text-white group-hover:text-blue-400 transition-colors">Karl's Gallery</p>
+              <p class="text-[10px] text-neutral-500">Facebook Page</p>
+            </div>
+          </div>
+          <span class="text-xs text-neutral-400 group-hover:translate-x-1 transition-transform">↗</span>
+        </a>
+
+        <!-- Email Link -->
+        <a 
+          href="mailto:karlsgallery6@gmail.com?subject=Inquiry%20%2F%20Booking%20Request%20-%20Karl's%20Gallery&body=Hi%20Karl%2C%0A%0AI'm%20interested%20in%20inquiring%20about%20your%20photography%20services!%0A%0ADetails%3A%0A-%20Event%20Type%3A%20(Sports%20%2F%20Wedding%20%2F%20Event)%0A-%20Target%20Date%3A%20%0A-%20Location%3A%20%0A%0AThank%20you!" 
+          class="flex items-center justify-between p-4 bg-neutral-950 border border-neutral-800/80 rounded-xl hover:border-cyan-500 hover:bg-neutral-900 transition-all duration-300 group text-left"
+        >
+          <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-lg bg-cyan-500/20 text-cyan-300 flex items-center justify-center text-base">
+              ✉️
+            </div>
+            <div>
+              <p class="text-xs font-semibold text-white group-hover:text-cyan-300 transition-colors">karlsgallery6@gmail.com</p>
+              <p class="text-[10px] text-neutral-500">Click to compose email draft</p>
+            </div>
+          </div>
+          <span class="text-xs text-neutral-400 group-hover:translate-x-1 transition-transform">↗</span>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- COPIED TO CLIPBOARD TOAST NOTIFICATION -->
+  <div 
+    id="share-toast" 
+    class="fixed bottom-6 right-6 z-50 bg-neutral-900 border border-neutral-700 text-white text-xs px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2 transition-all duration-300 opacity-0 translate-y-4 pointer-events-none"
+  >
+    <span class="text-green-400">✓</span> Link copied to clipboard!
+  </div>
+
+</Layout>
+
+<!-- CLIENT-SIDE FILTERING, LIGHTBOX, MODAL & SHARE SCRIPT -->
+<script>
+  function setupGalleryFeatures() {
+    // 1. CATEGORY FILTER LOGIC
+    const buttons = document.querySelectorAll('.filter-btn');
+    const galleryItems = document.querySelectorAll('.gallery-item');
+
+    buttons.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const filter = btn.getAttribute('data-filter');
+
+        buttons.forEach((b) => {
+          b.classList.remove('bg-white', 'text-black', 'border-white');
+          b.classList.add('bg-neutral-900', 'text-neutral-400', 'border-neutral-800');
+        });
+        btn.classList.add('bg-white', 'text-black', 'border-white');
+        btn.classList.remove('bg-neutral-900', 'text-neutral-400', 'border-neutral-800');
+
+        galleryItems.forEach((item) => {
+          const itemCategory = item.getAttribute('data-category');
+          if (filter === 'all' || itemCategory === filter) {
+            (item as HTMLElement).style.display = 'block';
+          } else {
+            (item as HTMLElement).style.display = 'none';
+          }
+        });
+      });
+    });
+
+    // 2. LIGHTBOX ENLARGE LOGIC
+    const lightbox = document.getElementById('lightbox');
+    const lightboxImg = document.getElementById('lightbox-img') as HTMLImageElement;
+    const lightboxClose = document.getElementById('lightbox-close');
+
+    galleryItems.forEach((item) => {
+      item.addEventListener('click', () => {
+        const img = item.querySelector('img');
+        if (img && lightbox && lightboxImg) {
+          lightboxImg.src = img.src;
+          lightbox.classList.remove('hidden');
+          setTimeout(() => {
+            lightbox.classList.remove('opacity-0');
+            lightboxImg.classList.remove('scale-95');
+          }, 10);
+        }
+      });
+    });
+
+    function closeLightbox() {
+      if (lightbox && lightboxImg) {
+        lightbox.classList.add('opacity-0');
+        lightboxImg.classList.add('scale-95');
+        setTimeout(() => {
+          lightbox.classList.add('hidden');
+          lightboxImg.src = '';
+        }, 300);
+      }
+    }
+
+    lightboxClose?.addEventListener('click', closeLightbox);
+    lightbox?.addEventListener('click', (e) => {
+      if (e.target === lightbox) closeLightbox();
+    });
+
+    // 3. CONTACT MODAL LOGIC
+    const contactModal = document.getElementById('contact-modal');
+    const contactCard = document.getElementById('contact-modal-card');
+    const openContactBtn = document.getElementById('open-contact-modal');
+    const closeContactBtn = document.getElementById('close-contact-modal');
+
+    function openContactModal() {
+      if (contactModal && contactCard) {
+        contactModal.classList.remove('opacity-0', 'pointer-events-none');
+        contactCard.classList.remove('scale-95', 'opacity-0');
+        contactCard.classList.add('scale-100', 'opacity-100');
+      }
+    }
+
+    function closeContactModal() {
+      if (contactModal && contactCard) {
+        contactModal.classList.add('opacity-0', 'pointer-events-none');
+        contactCard.classList.add('scale-95', 'opacity-0');
+        contactCard.classList.remove('scale-100', 'opacity-100');
+      }
+    }
+
+    openContactBtn?.addEventListener('click', openContactModal);
+    closeContactBtn?.addEventListener('click', closeContactModal);
+    contactModal?.addEventListener('click', (e) => {
+      if (e.target === contactModal) closeContactModal();
+    });
+
+    // 4. UNIVERSAL SMART SHARE LOGIC (PHONE & PC)
+    const shareBtn = document.getElementById('share-btn');
+    const toast = document.getElementById('share-toast');
+
+    shareBtn?.addEventListener('click', async () => {
+      const shareData = {
+        title: "Karl's Gallery",
+        text: "Check out Karl's Gallery photography portfolio!",
+        url: window.location.href,
+      };
+
+      if (navigator.share) {
+        try {
+          await navigator.share(shareData);
+        } catch (err) {
+          // User canceled share
+        }
+      } else {
+        try {
+          await navigator.clipboard.writeText(window.location.href);
+          if (toast) {
+            toast.classList.remove('opacity-0', 'translate-y-4', 'pointer-events-none');
+            setTimeout(() => {
+              toast.classList.add('opacity-0', 'translate-y-4', 'pointer-events-none');
+            }, 2500);
+          }
+        } catch (err) {
+          alert('Link copied: ' + window.location.href);
+        }
+      }
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        closeLightbox();
+        closeContactModal();
+      }
+    });
+  }
+
+  setupGalleryFeatures();
+  document.addEventListener('astro:page-load', setupGalleryFeatures);
+</script>

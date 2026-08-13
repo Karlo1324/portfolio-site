@@ -1,0 +1,561 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="Client Dashboard & Calendar — Admin Only">
+
+  <!-- ========================================== -->
+  <!-- 🔒 PASSCODE LOCK SCREEN                    -->
+  <!-- ========================================== -->
+  <div id="lock-screen" class="min-h-[70vh] flex items-center justify-center px-4">
+    <div class="bg-neutral-900/80 border border-neutral-800 p-8 rounded-2xl max-w-md w-full text-center shadow-2xl backdrop-blur-md">
+      <div class="text-4xl mb-4">🔐</div>
+      <h1 class="text-2xl font-light tracking-wide mb-2">Admin Dashboard</h1>
+      <p class="text-neutral-400 text-sm mb-6">Enter your passcode to manage calendar and bookings.</p>
+
+      <form id="auth-form" class="flex flex-col gap-4">
+        <input 
+          type="password" 
+          id="passcode-input" 
+          placeholder="Enter Passcode..." 
+          class="w-full px-4 py-3 bg-neutral-950 border border-neutral-800 rounded-xl text-center text-lg text-white placeholder-neutral-600 focus:outline-none focus:border-white transition-colors"
+          required
+        />
+        <p id="error-msg" class="text-red-400 text-xs hidden">Incorrect passcode. Try again!</p>
+        <button 
+          type="submit" 
+          class="w-full py-3 bg-white text-black text-xs font-semibold uppercase tracking-widest rounded-xl hover:bg-neutral-200 transition-colors cursor-pointer"
+        >
+          Unlock Dashboard
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- 📊 PROTECTED DASHBOARD CONTENT             -->
+  <!-- ========================================== -->
+  <div id="dashboard-content" class="hidden max-w-7xl mx-auto px-4 md:px-6 py-8">
+    
+    <!-- Top Header Bar -->
+    <section class="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-neutral-800 pb-6">
+      <div>
+        <h1 class="text-3xl font-light tracking-wide">Karl's Schedule</h1>
+        <p class="text-neutral-400 text-sm mt-1">Manage booked shoots, deadlines, and event countdowns.</p>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <button 
+          id="open-event-modal" 
+          class="px-5 py-2.5 bg-white text-black font-semibold text-xs uppercase tracking-wider rounded-full hover:bg-neutral-200 transition-colors cursor-pointer shadow-sm flex items-center gap-2"
+        >
+          <span>+</span> Add Event
+        </button>
+        <button 
+          id="logout-btn" 
+          class="px-4 py-2.5 border border-neutral-800 text-neutral-400 hover:text-white hover:border-neutral-600 rounded-full text-xs uppercase tracking-wider transition-colors cursor-pointer"
+        >
+          🔒 Lock
+        </button>
+      </div>
+    </section>
+
+    <!-- MAIN TWO-COLUMN DASHBOARD LAYOUT -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+      
+      <!-- LEFT: NOTION-LIKE CALENDAR (5 Cols) -->
+      <div class="lg:col-span-5 bg-neutral-900/60 border border-neutral-800/80 rounded-2xl p-6 shadow-xl backdrop-blur-sm self-start">
+        
+        <!-- Calendar Header -->
+        <div class="flex items-center justify-between mb-6">
+          <h2 id="calendar-month-year" class="text-lg font-medium tracking-wide">Month Year</h2>
+          <div class="flex gap-1">
+            <button id="prev-month" class="px-3 py-1 bg-neutral-800/80 hover:bg-neutral-700 rounded-lg text-sm text-neutral-300 transition-colors cursor-pointer">←</button>
+            <button id="next-month" class="px-3 py-1 bg-neutral-800/80 hover:bg-neutral-700 rounded-lg text-sm text-neutral-300 transition-colors cursor-pointer">→</button>
+          </div>
+        </div>
+
+        <!-- Days of Week Header -->
+        <div class="grid grid-cols-7 text-center text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-2">
+          <div>Su</div><div>Mo</div><div>Tu</div><div>We</div><div>Th</div><div>Fr</div><div>Sa</div>
+        </div>
+
+        <!-- Calendar Days Grid -->
+        <div id="calendar-days" class="grid grid-cols-7 gap-1 text-center text-sm font-medium">
+          <!-- Dynamically Generated Days -->
+        </div>
+
+        <p class="text-[11px] text-neutral-500 text-center mt-4">💡 Click any date above to add or view an event!</p>
+      </div>
+
+      <!-- RIGHT: EVENTS TABLE & COUNTDOWNS (7 Cols) -->
+      <div class="lg:col-span-7 space-y-4">
+        <div class="flex items-center justify-between border-b border-neutral-800/60 pb-3">
+          <h2 class="text-lg font-light tracking-wide">Upcoming Events Table</h2>
+          <span id="event-count-badge" class="text-xs bg-neutral-800 text-neutral-400 px-3 py-1 rounded-full font-mono">0 events</span>
+        </div>
+
+        <!-- Table View -->
+        <div class="bg-neutral-900/60 border border-neutral-800/80 rounded-2xl overflow-hidden shadow-xl">
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm">
+              <thead class="bg-neutral-950/80 text-xs uppercase tracking-wider text-neutral-400 border-b border-neutral-800">
+                <tr>
+                  <th class="py-3.5 px-4">Client / Event</th>
+                  <th class="py-3.5 px-4">Date</th>
+                  <th class="py-3.5 px-4">Countdown</th>
+                  <th class="py-3.5 px-4">Status</th>
+                  <th class="py-3.5 px-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="events-table-body" class="divide-y divide-neutral-800/60 text-neutral-200">
+                <!-- Dynamically Generated Rows -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- ➕ / ✏️ ADD & EDIT EVENT MODAL             -->
+  <!-- ========================================== -->
+  <div id="event-modal" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+    <div class="bg-neutral-900 border border-neutral-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl relative">
+      <button id="close-modal-btn" type="button" class="absolute top-4 right-4 text-neutral-400 hover:text-white text-xl cursor-pointer">✕</button>
+      
+      <h3 id="modal-title" class="text-xl font-light mb-1">Add Scheduled Event</h3>
+      <p id="modal-subtitle" class="text-xs text-neutral-400 mb-6">Create a new booking entry for your calendar and dashboard table.</p>
+
+      <form id="add-event-form" class="space-y-4">
+        <!-- Hidden ID for tracking edit vs add -->
+        <input type="hidden" name="eventId" id="modal-event-id" value="" />
+
+        <div>
+          <label class="block text-xs uppercase tracking-wider text-neutral-400 mb-1">Client Name</label>
+          <input type="text" name="client" id="modal-client" placeholder="e.g. Miss Jessa" class="w-full px-4 py-2.5 bg-neutral-950 border border-neutral-800 rounded-xl text-sm focus:border-white focus:outline-none text-white" required />
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs uppercase tracking-wider text-neutral-400 mb-1">Event Type</label>
+            <select name="type" id="modal-type" class="w-full px-4 py-2.5 bg-neutral-950 border border-neutral-800 rounded-xl text-sm focus:border-white focus:outline-none text-white">
+              <option value="Wedding">Wedding</option>
+              <option value="Sports">Sports</option>
+              <option value="Events">Events</option>
+              <option value="Portrait">Portrait</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-xs uppercase tracking-wider text-neutral-400 mb-1">Date</label>
+            <input type="date" name="date" id="modal-date" class="w-full px-4 py-2.5 bg-neutral-950 border border-neutral-800 rounded-xl text-sm focus:border-white focus:outline-none text-white" required />
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs uppercase tracking-wider text-neutral-400 mb-1">Location</label>
+          <input type="text" name="location" id="modal-location" placeholder="e.g. Mary Miatrix" class="w-full px-4 py-2.5 bg-neutral-950 border border-neutral-800 rounded-xl text-sm focus:border-white focus:outline-none text-white" required />
+        </div>
+
+        <div>
+          <label class="block text-xs uppercase tracking-wider text-neutral-400 mb-1">Status</label>
+          <select name="status" id="modal-status" class="w-full px-4 py-2.5 bg-neutral-950 border border-neutral-800 rounded-xl text-sm focus:border-white focus:outline-none text-white">
+            <option value="Confirmed">Confirmed</option>
+            <option value="Scheduled">Scheduled</option>
+            <option value="Pending">Pending</option>
+          </select>
+        </div>
+
+        <button id="modal-submit-btn" type="submit" class="w-full py-3 bg-white text-black text-xs font-semibold uppercase tracking-widest rounded-xl hover:bg-neutral-200 transition-colors cursor-pointer mt-2">
+          Save Event
+        </button>
+      </form>
+    </div>
+  </div>
+
+</Layout>
+
+<!-- CLIENT INTERACTIVITY & CALENDAR SCRIPT -->
+<script>
+  const SECRET_PASSCODE = "2026";
+
+  const defaultEvents = [
+    {
+      id: "1",
+      client: "PRISAA Davao Region",
+      type: "Sports",
+      date: "2026-08-20",
+      location: "Davao Sports Complex",
+      status: "Confirmed"
+    }
+  ];
+
+  function getStoredEvents() {
+    const saved = localStorage.getItem('karl_dashboard_events');
+    if (!saved) return defaultEvents;
+    try {
+      return JSON.parse(saved);
+    } catch (e) {
+      return defaultEvents;
+    }
+  }
+
+  function saveEvents(events: any[]) {
+    localStorage.setItem('karl_dashboard_events', JSON.stringify(events));
+  }
+
+  function calculateDaysLeft(dateString: string) {
+    if (!dateString) return { text: "No date", class: "bg-neutral-800 text-neutral-500" };
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const parts = dateString.split('-');
+    if (parts.length !== 3) {
+      return { text: "No date", class: "bg-neutral-800 text-neutral-500" };
+    }
+
+    const year = parseInt(parts[0], 10);
+    const month = parseInt(parts[1], 10) - 1;
+    const day = parseInt(parts[2], 10);
+
+    const targetDate = new Date(year, month, day);
+    targetDate.setHours(0, 0, 0, 0);
+
+    if (isNaN(targetDate.getTime())) {
+      return { text: "No date", class: "bg-neutral-800 text-neutral-500" };
+    }
+
+    const diffTime = targetDate.getTime() - today.getTime();
+    const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays < 0) {
+      return { text: `${Math.abs(diffDays)}d ago`, class: "bg-neutral-800 text-neutral-500" };
+    } else if (diffDays === 0) {
+      return { text: "Today!", class: "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-bold animate-pulse" };
+    } else if (diffDays === 1) {
+      return { text: "Tomorrow", class: "bg-amber-500/20 text-amber-300 border border-amber-500/40 font-medium" };
+    } else {
+      return { text: `${diffDays} days left`, class: "bg-cyan-500/10 text-cyan-300 border border-cyan-500/30" };
+    }
+  }
+
+  function formatDateDisplay(dateString: string) {
+    if (!dateString) return '—';
+    const parts = dateString.split('-');
+    if (parts.length === 3) {
+      const d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+      if (!isNaN(d.getTime())) {
+        return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      }
+    }
+    return dateString;
+  }
+
+  function initDashboard() {
+    let currentDate = new Date();
+    let events = getStoredEvents();
+
+    const lockScreen = document.getElementById('lock-screen');
+    const dashboardContent = document.getElementById('dashboard-content');
+    const authForm = document.getElementById('auth-form');
+    const passcodeInput = document.getElementById('passcode-input') as HTMLInputElement;
+    const errorMsg = document.getElementById('error-msg');
+    const logoutBtn = document.getElementById('logout-btn');
+
+    const monthYearText = document.getElementById('calendar-month-year');
+    const calendarDays = document.getElementById('calendar-days');
+    const prevMonthBtn = document.getElementById('prev-month');
+    const nextMonthBtn = document.getElementById('next-month');
+
+    const tableBody = document.getElementById('events-table-body');
+    const eventCountBadge = document.getElementById('event-count-badge');
+
+    const eventModal = document.getElementById('event-modal');
+    const openModalBtn = document.getElementById('open-event-modal');
+    const closeModalBtn = document.getElementById('close-modal-btn');
+    const addEventForm = document.getElementById('add-event-form') as HTMLFormElement;
+
+    // Modal elements
+    const modalTitle = document.getElementById('modal-title');
+    const modalSubtitle = document.getElementById('modal-subtitle');
+    const modalSubmitBtn = document.getElementById('modal-submit-btn');
+    const modalEventId = document.getElementById('modal-event-id') as HTMLInputElement;
+    const modalClientInput = document.getElementById('modal-client') as HTMLInputElement;
+    const modalTypeSelect = document.getElementById('modal-type') as HTMLSelectElement;
+    const modalDateInput = document.getElementById('modal-date') as HTMLInputElement;
+    const modalLocationInput = document.getElementById('modal-location') as HTMLInputElement;
+    const modalStatusSelect = document.getElementById('modal-status') as HTMLSelectElement;
+
+    // --- Authentication ---
+    if (sessionStorage.getItem('dashboard_authenticated') === 'true') {
+      showDashboard();
+    }
+
+    authForm?.addEventListener('submit', (e) => {
+      e.preventDefault();
+      if (passcodeInput?.value === SECRET_PASSCODE) {
+        sessionStorage.setItem('dashboard_authenticated', 'true');
+        showDashboard();
+      } else {
+        errorMsg?.classList.remove('hidden');
+        if (passcodeInput) passcodeInput.value = '';
+      }
+    });
+
+    logoutBtn?.addEventListener('click', () => {
+      sessionStorage.removeItem('dashboard_authenticated');
+      lockScreen?.classList.remove('hidden');
+      dashboardContent?.classList.add('hidden');
+    });
+
+    function showDashboard() {
+      lockScreen?.classList.add('hidden');
+      dashboardContent?.classList.remove('hidden');
+      renderAll();
+    }
+
+    // --- Render Functions ---
+    function renderAll() {
+      renderCalendar();
+      renderEventsTable();
+    }
+
+    function renderCalendar() {
+      if (!calendarDays || !monthYearText) return;
+
+      const year = currentDate.getFullYear();
+      const month = currentDate.getMonth();
+
+      monthYearText.textContent = currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
+      calendarDays.innerHTML = '';
+
+      const firstDayIndex = new Date(year, month, 1).getDay();
+      const lastDay = new Date(year, month + 1, 0).getDate();
+      const prevLastDay = new Date(year, month, 0).getDate();
+
+      // Previous month padding
+      for (let x = firstDayIndex; x > 0; x--) {
+        const dayDiv = document.createElement('div');
+        dayDiv.className = 'py-3 text-neutral-700 opacity-40 select-none';
+        dayDiv.textContent = (prevLastDay - x + 1).toString();
+        calendarDays.appendChild(dayDiv);
+      }
+
+      // Current month days
+      const today = new Date();
+      for (let day = 1; day <= lastDay; day++) {
+        const dayDiv = document.createElement('div');
+        
+        const formattedMonth = String(month + 1).padStart(2, '0');
+        const formattedDay = String(day).padStart(2, '0');
+        const dateStr = `${year}-${formattedMonth}-${formattedDay}`;
+
+        const dayEvents = events.filter((e: any) => e.date === dateStr);
+        const hasEvent = dayEvents.length > 0;
+        const isToday = today.getFullYear() === year && today.getMonth() === month && today.getDate() === day;
+
+        dayDiv.className = `py-2.5 rounded-xl cursor-pointer transition-all flex flex-col items-center justify-center relative group ${
+          isToday ? 'bg-white text-black font-bold shadow-md' : 'hover:bg-neutral-800 text-neutral-200'
+        }`;
+
+        dayDiv.innerHTML = `
+          <span>${day}</span>
+          ${hasEvent ? `<span class="w-1.5 h-1.5 rounded-full ${isToday ? 'bg-black' : 'bg-cyan-400'} mt-0.5"></span>` : ''}
+        `;
+
+        dayDiv.addEventListener('click', () => {
+          if (hasEvent) {
+            // Edit existing event if clicking date with event
+            openEditModal(dayEvents[0]);
+          } else {
+            // Create new event pre-filled with this date
+            openAddModal(dateStr);
+          }
+        });
+
+        calendarDays.appendChild(dayDiv);
+      }
+    }
+
+    function renderEventsTable() {
+      if (!tableBody || !eventCountBadge) return;
+
+      tableBody.innerHTML = '';
+      eventCountBadge.textContent = `${events.length} event${events.length === 1 ? '' : 's'}`;
+
+      if (events.length === 0) {
+        tableBody.innerHTML = `
+          <tr>
+            <td colspan="5" class="py-8 text-center text-neutral-500 text-sm">
+              No scheduled events yet. Click any date on the calendar or "+ Add Event" to get started!
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      const sortedEvents = [...events].sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+
+      sortedEvents.forEach((event: any) => {
+        const countdown = calculateDaysLeft(event.date);
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-neutral-800/40 transition-colors";
+
+        tr.innerHTML = `
+          <td class="py-3.5 px-4 font-medium text-white">
+            ${event.client || 'Untitled Event'}
+            <span class="block text-xs text-neutral-400 font-normal">${event.type || 'Event'} • ${event.location || 'Location TBD'}</span>
+          </td>
+          <td class="py-3.5 px-4 text-xs text-neutral-300 font-mono">${formatDateDisplay(event.date)}</td>
+          <td class="py-3.5 px-4">
+            <span class="inline-block text-[11px] px-2.5 py-1 rounded-full ${countdown.class}">
+              ${countdown.text}
+            </span>
+          </td>
+          <td class="py-3.5 px-4">
+            <span class="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded bg-neutral-800 text-neutral-300 border border-neutral-700">
+              ${event.status || 'Confirmed'}
+            </span>
+          </td>
+          <td class="py-3.5 px-4 text-right">
+            <div class="flex items-center justify-end gap-3">
+              <button data-id="${event.id}" class="edit-btn text-xs text-cyan-400 hover:text-cyan-300 hover:underline cursor-pointer font-medium">
+                Edit
+              </button>
+              <button data-id="${event.id}" class="delete-btn text-xs text-red-400 hover:text-red-300 hover:underline cursor-pointer">
+                Delete
+              </button>
+            </div>
+          </td>
+        `;
+
+        tableBody.appendChild(tr);
+      });
+
+      // Edit event listener
+      document.querySelectorAll('.edit-btn').forEach((btn) => {
+        btn.addEventListener('click', (e) => {
+          const id = (e.currentTarget as HTMLElement).getAttribute('data-id');
+          const targetEvent = events.find((ev: any) => ev.id === id);
+          if (targetEvent) {
+            openEditModal(targetEvent);
+          }
+        });
+      });
+
+      // Delete event listener
+      document.querySelectorAll('.delete-btn').forEach((btn) => {
+        btn.addEventListener('click', (e) => {
+          const id = (e.currentTarget as HTMLElement).getAttribute('data-id');
+          events = events.filter((ev: any) => ev.id !== id);
+          saveEvents(events);
+          renderAll();
+        });
+      });
+    }
+
+    // --- Month Navigation ---
+    prevMonthBtn?.addEventListener('click', () => {
+      currentDate.setMonth(currentDate.getMonth() - 1);
+      renderCalendar();
+    });
+
+    nextMonthBtn?.addEventListener('click', () => {
+      currentDate.setMonth(currentDate.getMonth() + 1);
+      renderCalendar();
+    });
+
+    // --- Modal Helpers ---
+    function openAddModal(dateStr?: string) {
+      if (addEventForm) addEventForm.reset();
+      
+      if (modalEventId) modalEventId.value = '';
+      if (modalTitle) modalTitle.textContent = 'Add Scheduled Event';
+      if (modalSubtitle) modalSubtitle.textContent = 'Create a new booking entry for your calendar and dashboard table.';
+      if (modalSubmitBtn) modalSubmitBtn.textContent = 'Save Event';
+
+      if (modalDateInput) {
+        modalDateInput.value = dateStr || new Date().toISOString().split('T')[0];
+      }
+
+      eventModal?.classList.remove('hidden');
+    }
+
+    function openEditModal(event: any) {
+      if (modalEventId) modalEventId.value = event.id;
+      if (modalClientInput) modalClientInput.value = event.client || '';
+      if (modalTypeSelect) modalTypeSelect.value = event.type || 'Wedding';
+      if (modalDateInput) modalDateInput.value = event.date || '';
+      if (modalLocationInput) modalLocationInput.value = event.location || '';
+      if (modalStatusSelect) modalStatusSelect.value = event.status || 'Confirmed';
+
+      if (modalTitle) modalTitle.textContent = 'Edit Scheduled Event';
+      if (modalSubtitle) modalSubtitle.textContent = 'Update details for this shoot or booking.';
+      if (modalSubmitBtn) modalSubmitBtn.textContent = 'Update Event';
+
+      eventModal?.classList.remove('hidden');
+    }
+
+    function closeModal() {
+      eventModal?.classList.add('hidden');
+      if (addEventForm) addEventForm.reset();
+      if (modalEventId) modalEventId.value = '';
+    }
+
+    openModalBtn?.addEventListener('click', () => openAddModal());
+    closeModalBtn?.addEventListener('click', closeModal);
+    eventModal?.addEventListener('click', (e) => {
+      if (e.target === eventModal) closeModal();
+    });
+
+    // --- Handle Form Save/Update ---
+    addEventForm?.addEventListener('submit', (e) => {
+      e.preventDefault();
+      
+      const form = e.currentTarget as HTMLFormElement;
+      const formData = new FormData(form);
+
+      const eventId = formData.get('eventId')?.toString();
+      const client = formData.get('client')?.toString().trim() || 'Untitled Event';
+      const type = formData.get('type')?.toString() || 'Wedding';
+      const date = formData.get('date')?.toString() || '';
+      const location = formData.get('location')?.toString().trim() || 'Location TBD';
+      const status = formData.get('status')?.toString() || 'Confirmed';
+
+      if (!date) return;
+
+      if (eventId) {
+        // Edit existing event
+        events = events.map((ev: any) => {
+          if (ev.id === eventId) {
+            return { ...ev, client, type, date, location, status };
+          }
+          return ev;
+        });
+      } else {
+        // Add brand new event
+        const newEvent = {
+          id: Date.now().toString(),
+          client,
+          type,
+          date,
+          location,
+          status
+        };
+        events.push(newEvent);
+      }
+
+      saveEvents(events);
+      closeModal();
+      renderAll();
+    });
+  }
+
+  initDashboard();
+  document.addEventListener('astro:page-load', initDashboard);
+</script>
